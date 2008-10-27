@@ -1,26 +1,4 @@
 {{{
-[comment about_system]
-mysql destekli vendor sistemi
-
-vendorun özellikleri;
-- vendorun hangi eşyaları al/sat yapacağını belirleyebiliyoruz. [type ile]
-- vendor tüm üyelerden ilgilendiği ürünleri alabilir.
-- container satma işlemi detaylandırılmıştır.
-- vendor sistemi tamamiyle mysql desteklidir. 
-  + vendora çanta yada herhangi bir container satıldığında içindeki itemlarda mysql'e işlenir.
-- websitesinden oyuncu hangi vendorda hangi ürün olduğunu görebilecek, arama ve filtreleme yapabilecek, kendi ürünlerini listeleyebilecektir.
-- içinde dialoglarda işimi kolaylaştırması için yazdığım f_make_html ve f_make_bg de mevcut. 
-[ fakat benim gumplarım farklı olduğu için sizde client crash yapabilir ]
-- resimler ile her aşamayı gösterdim.
-
-işleyişi;
-yönetici .addvendor yazarak vendor yaratma menüsüne ulaşır. 
-vendorun satmasını/almasını istediği eşya tipini/tiplerini menüden seçer.
-işlemi onayladıgında ayaklarının dibinde vendor yaratılmış olur. tabiki mysql tablolarıda.
-oyuncular tüccara item bırakırken bir ücret vermiyorlar.
-item satıldığında bankalarına paraları otomatik yatırılır.
-dialoglar aşağı doğru otomatik uzayabilme yetisine sahiptir.
-yani tüccar 10 ürünle ilgileniyorsa dialog 10 ürünü de gösterecek şekilde uzar.
 
 [function f_make_html] // usage: f_make_html x,y,width,height,text 
 dhtmlgump <argv[0]> <argv[1]> <argv[2]> <argv[3]> 0 0 <def.small><argv[4]>
@@ -77,6 +55,7 @@ gumppic <eval <local.genislik>+55> <eval <local.yukseklik>+60> 13048 0	// rightb
 		endif
 	endif
 	return 0
+
 
 [function f_rename] // firstlettertoupper
 	return <strtoupper(<strsub 0 1 <args>>)><strtolower(<strsub 1 30 <args>>)>
@@ -481,6 +460,18 @@ on 1
 	serv.log OBJ: Name: <obj.name>, Uid: <obj>, Value: <dlocal.value>, isCont: <dlocal.iscont>
 	serv.log !Vendor Item Add Finish!
 
+[function f_isOnVendor]
+	obj <argv[0]>
+	ref1 <argv[1]>
+
+	if <obj.cont> == <ref1.findlayer.29.uid>
+		return 1
+	endif
+	db.connect
+	db.execute "delete from vendor_items_<ref1> where productUid='<obj>';"
+	return 0
+
+
 [dialog d_new_vendor_item_list] // [src]: buyer&seller || default: vendor
 	281,21
 	nomove
@@ -494,7 +485,7 @@ on 1
 		local.y 20
 			for d 0 <eval <db.row.numrows> - 1>
 				obj <db.row.<dlocal.d>.productUid>
-					if <obj>
+					if <obj> && <f_isOnvendor <obj>,<uid>>
 						ref1 <db.row.<dlocal.d>.productOwnerUid>
 						button 105 <eval <local.y> + 33> 2224 2224 1 0 <db.row.<dlocal.d>.productId>
 						tilepichue 45 <eval <local.y> + 30> <obj.id> <eval <obj.color>>
