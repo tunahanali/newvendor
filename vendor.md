@@ -1,0 +1,698 @@
+
+[function f_make_html] // usage: f_make_html x,y,width,height,text 
+dhtmlgump <argv[0]> <argv[1]> <argv[2]> <argv[3]> 0 0 <def.small><argv[4]>
+
+[function f_make_bg] // usage: f_make_bg width,height
+local.genislik <argv[0]>
+local.yukseklik <argv[1]>
+gumppic 0 0 13040 0							// left top
+gumppictiled 55 0 <dlocal.genislik> 100 13041				// top
+gumppic <eval <local.genislik>+55> 0 13042 0				// right top
+gumppictiled 0 60 70 <dlocal.yukseklik> 13043				// left
+gumppictiled 55 60 <dlocal.genislik> <dlocal.yukseklik> 13044		// center
+gumppictiled <eval <local.genislik>+55> 60 10 <dlocal.yukseklik> 13045	// right
+gumppic 0 <eval <local.yukseklik>+60> 13046 0				// left bottom
+gumppictiled 55 <eval <local.yukseklik>+60> <dlocal.genislik> 70 13047	// bottom
+gumppic <eval <local.genislik>+55> <eval <local.yukseklik>+60> 13048 0	// rightbottom
+
+[function f_replace_to_product_name]	
+	for d 1 23
+		if strmatch('<args>','<def.type_<dlocal.d>>')
+			return <def.name_<dlocal.d>>
+		endif
+	endfor
+
+[function f_find_productTypes]
+	local.count 0
+	for d 0 23
+		if strcmp('<argv[<dlocal.d>]>','')
+			local.pr <f_replace_to_product_name <argv[<dlocal.d>]>>
+			local.product_<dlocal.d> <local.pr>
+			local.count += 1
+		endif
+	endfor
+
+[function isAllowedProduct]
+	local.obj_type <argv[0]>
+	for d 1 23
+		if !<isempty <argv[<dlocal.d>]>>
+			if (strmatch('<argv[<dlocal.d>]>*','<local.obj_type>')) || (strmatch('t_miscitems','<argv[<dlocal.d>]>'))
+				return 1
+			endif
+		endif
+	endfor
+	return 0
+
+[function isOwnerThis]
+	if <isnum <argv[0]>> 
+		db.connect
+		db.query "select * from vendor_items_<argv[1]> where productUid = '<argv[0]>';"
+		if <db.row.numrows> != 0
+			if <db.row.0.productOwnerUid> == <uid>
+				return 1
+			endif
+		endif
+	endif
+	return 0
+
+
+[function f_rename] // firstlettertoupper
+	return <strtoupper(<strsub 0 1 <args>>)><strtolower(<strsub 1 30 <args>>)>
+
+[plevel 6]
+addvendor
+
+[function addvendor]
+	dialog d_add_vendor
+
+[dialog d_add_vendor]
+	30,30
+
+	page 0 
+	f_make_bg 220,180
+	f_make_html 80,20,320,20,Vendor özelliklerini belirleyin
+	f_make_html 50,55,320,20,Ne satsın/alsın?
+	
+	local.first_y 55
+	local.second_y 55
+	local.third_y 55
+	local.x 50
+	for d 1 23
+		if <dlocal.d> <= 10
+			checkbox <dlocal.x> <eval <local.first_y>+20> 2510 2511 0 <dlocal.d>
+			local.first_y += 20
+		elseif (<dlocal.d> > 10) && (<dlocal.d> <= 20)
+			checkbox <eval <local.x>+90> <eval <local.second_y>+20> 2510 2511 0 <dlocal.d>
+			local.second_y += 20
+		else
+			checkbox <eval <local.x>+160> <eval <local.third_y>+20> 2510 2511 0 <dlocal.d>
+			local.third_y += 20
+		endif
+	endfor
+
+	local.first_y 55
+	local.second_y 55
+	local.third_y 55
+	local.x 70
+	for d 1 23
+		if <dlocal.d> <= 10
+			f_make_html <dlocal.x>,<eval <local.first_y>+20>,100,20,<def.name_<dlocal.d>>
+			local.first_y += 20
+		elseif (<dlocal.d> > 10) && (<dlocal.d> <= 20)
+			f_make_html <eval <local.x>+90>,<eval <local.second_y>+20>,100,20,<def.name_<dlocal.d>>
+			local.second_y += 20
+		else
+			f_make_html <eval <local.x>+160>,<eval <local.third_y>+20>,100,20,<def.name_<dlocal.d>>
+			local.third_y += 20
+		endif
+	endfor
+
+	button 240 143 2224 2224 1 0 1
+	f_make_html 210,140,320,20,Yarat
+
+[dialog d_add_vendor button]
+on 1
+	local.types
+	for d 1 23
+		if <argchk[<dlocal.d>]> == 1
+			local.types .= ,<def.type_<dlocal.d>>
+		endif
+	endfor
+	local.len <eval strlen(<local.types>)>
+	local.types <strsub 2 <dlocal.len> <local.types>>
+
+	serv.newnpc c_new_vendor
+	new.p <p>
+	new.tag.productType <local.types>
+	new.updatex
+	
+[defname new_vendor_types]
+	type_1	t_weapon
+	type_2	t_armor
+	type_3	t_clothing
+	type_4	t_wand
+	type_5	t_carpentry
+	type_6	t_container
+	type_7	t_food
+	type_8	t_potion
+	type_9	t_figurine
+	type_10	t_ore
+	type_11	t_map
+	type_12	t_scroll
+	type_13	t_miscitems
+	type_14	t_clock
+	type_15	t_chair
+	type_16	t_log
+	type_17	t_drink
+	type_18	t_fish
+	type_19	t_keg
+	type_20	t_ingot
+	type_21	t_spellbook
+	type_22	t_reagents
+	type_23	t_runebook
+
+[defname new_vendor_product_names]
+	name_1	Silah
+	name_2	Zırh
+	name_3	Kıyafet
+	name_4	Wand
+	name_5	Doğramacılık
+	name_6	Çanta/Kasa
+	name_7	Yiyecek
+	name_8	Potion(İksir)
+	name_9	Binek/Hayvan
+	name_10	Maden
+	name_11	Harita
+	name_12	Scroll
+	name_13	Diğerleri
+	name_14	Saat
+	name_15	Sandalye
+	name_16	Odun
+	name_17	İçecek
+	name_18	Balık
+	name_19	Keg(Fıçı)
+	name_20	Ingot(Külçe)
+	name_21	Spellbook
+	name_22	Reg
+	name_23	Runebook
+
+
+[chardef c_new_vendor]
+	name #names_humanmale
+	id c_man
+	can mt_usehands|mt_equip
+	armor 300
+
+on @create
+	npc brain_vendor
+	color colors_skin
+	flags 028000005
+	db.connect
+	db.execute "create table if not exists vendors (vendorId int unsigned not null auto_increment primary key,vendorUid text,vendorName text,vendorProductType text, vendorComm int);"
+	db.execute "insert into vendors values (NULL, '<uid>', '<addslashes <name>>', '<tag.productType>', '<dtag.commission>');"
+	db.execute "create table if not exists vendor_items_<uid> (productId int unsigned not null auto_increment primary key,productAddTime text,productUid text,productDispId text,productAttr text,productName text,productColor text,productAmount int,productType text,productCash int,productOwnerName text,productOwnerUid text,productIsCont int);"
+	str 1000
+	int 1000
+	dex 1000
+	fame 100
+	karma 100
+	invul 1
+	food 999
+	modmaxweight 5000000
+	itemnewbie random_male_hair
+	color colors_hair
+	itemnewbie random_facial_hair
+	color match_hair
+
+on @npcrestock
+	itemnewbie i_bankbox
+	more1 -1
+	item random_light
+	item i_shirt_plain
+	color colors_all
+	item random_pants
+	color colors_all
+	item random_boots
+	item i_apron_half
+
+on @gethit
+	return 1
+on @hittry
+	return 1
+on @attack
+	return 1
+on @spelleffect
+	return 1
+on @environchange
+	food 999
+on @death
+	hits <str>
+	action -1
+	return 1
+on @dclick
+	dialogclose d_new_vendor_main
+	dialog d_new_vendor_main,0,<src.uid>
+	return 1
+on @npcseenewplayer
+	say @1153,,1 Hey <src.name>!
+	dorand 2
+		say @1153,,1 Uygun fiyata eşya alınır, satılır! Geeel, geeel!
+		say @1153,,1 Gel <src.sex abi/abla>, geeel!
+	end
+	dorand 5
+		say @1153,,1 İlgini çekecek yeni şeyler geldi!
+		say @1153,,1 Bu fiyatı başka yerde bulamazsın!
+		say @1153,,1 Çeşit çeşit mallarım var. Geeeel, gel, gel!
+		say @1153,,1 Eskimez, kırılmaz bunlar!
+		say @1153,,1 Garantisi benim bu malların!
+	end
+
+[dialog d_new_vendor_main] // [src]: buyer&seller || [default]: vendor
+	21,21
+	nomove
+	
+	call f_find_productTypes <tag.productType>
+	local.defaultHeight 50
+
+	page 0
+	f_make_bg 180,<eval <local.defaultHeight> + (<local.count> * 20)>
+	f_make_html 65,25,320,20,Merhaba <src.name>, 
+	f_make_html 65,45,320,20,size nasıl yardımcı olabilirim?
+	f_make_html 75,75,320,20,Eşya satmak istiyorum 
+	f_make_html 75,95,320,20,Eşya satın almak istiyorum
+	button 53 77 2224 2224 1 0 1
+	button 53 97 2224 2224 1 0 2
+
+	f_make_html 75,125,320,20,İlgilendiğim ürünler;	
+	
+	local.defaultTypeHeight 125
+	for d 0 <eval <local.count> - 1>
+		f_make_html 75,<eval <local.defaultTypeHeight> + 20>,320,20,<local.product_<dlocal.d>>
+		local.defaultTypeHeight += 20
+	endfor
+	
+
+
+[dialog d_new_vendor_main button]
+on 0
+	dialogclose d_new_vendor_item_list
+	dialogclose d_new_vendor_add_item
+	dialogclose d_new_vendor_buy_item_confirm
+on 1
+	src.targetf f_add_vendor_item <uid> 
+	message @1153,,1 Bana hangi eşyayı satmak istiyorsunuz?
+	dialogclose d_new_vendor_item_list
+	dialogclose d_new_vendor_add_item
+	dialogclose d_new_vendor_buy_item_confirm
+	dialog d_new_vendor_main,0,<src.uid>
+on 2
+	src.ctag.startindex 0
+	dialogclose d_new_vendor_add_item
+	dialogclose d_new_vendor_buy_item_confirm
+	dialog d_new_vendor_main
+	dialog d_new_vendor_item_list
+
+[function f_add_vendor_item]
+	ref1 <argv[0]> // vendor
+	if <argo.isitem>
+		if <argo.topobj.uid> == <uid>
+			if <argo.type> != t_gold
+				if <argo.baseid> != i_backpack
+					if <isAllowedProduct <argo.type>,<ref1.tag.productType>>
+						dialog d_new_vendor_add_item,0,<ref1>,<argo>
+					else
+						ref1.message @025,,1 O tarz eşyalar ile ilgilenmiyorum, üzgünüm.
+					endif
+				else
+					ref1.message @025,,1 Onu alamam efendim, üzgünüm.
+				endif
+			else
+				ref1.message @025,,1 Altın alamıyorum efendim, yoksa bu bir rüşvet mi? 
+			endif
+		else
+		ref1.message @025,,1 Bana satmaya çalıştığınız eşya yanınızda olmalı efendim 
+		endif
+	else
+		ref1.message @025,,1 Sadece eşyalar ile ilgileniyorum efendim
+	endif
+
+[dialog d_new_vendor_add_item] // [default]: buyer&seller || [<argv[0]>]: vendor || [<argv[1]>]: item
+	281,21
+	nomove
+	ref1 <argv[0]>	// vendor
+	obj <argv[1]>	// item
+	if <obj.type> != t_container
+		f_make_bg 180,25
+		f_make_html 65,15,320,20,<qval <obj.amount>==1 ? :<obj.amount> adet> <f_rename <obj.name>> adlı eşya için 
+		f_make_html 65,35,320,20,<qval <obj.amount>==1 ? :toplam> fiyat belirleyiniz
+		tilepichue 45 65 <obj.id> <eval <obj.color>>
+		f_make_html 95,65,90,20,Fiyat:
+		f_make_html 205,65,90,20,gp
+		dtextentrylimited 125 65 200 20 0 1 9 0
+		f_make_html 165,105,320,20,Satılığa çıkar
+		button 143 107 2224 2224 1 0 1
+	else
+		obj.open
+		local.contnum 0
+		forcont <obj> 10
+			local.item_<dlocal.contnum>_uid <uid>
+			local.contnum += 1
+		endfor
+		local.height 30
+			if <dlocal.contnum> > 0
+				for d 1 <dlocal.contnum>
+				local.height += 20
+				endfor
+			endif
+		f_make_bg 180,<eval <local.height> + 20>
+		f_make_html 65,15,320,20,<f_rename <obj.name>> adlı eşya için 
+		f_make_html 65,35,320,20,toplam fiyat belirleyiniz
+		tilepichue 45 65 <obj.id> <eval <obj.color>>
+		f_make_html 95,65,90,20,Fiyat:
+		f_make_html 205,65,90,20,gp
+		dtextentrylimited 125 65 200 20 0 1 9 0
+			if <dlocal.contnum> > 0
+				f_make_html 65,95,120,20,İçindekiler:
+				local.yy 95
+					for e 0 <eval <local.contnum> - 1>
+						f_make_html 65,<eval <local.yy> + 20>,120,20,<uid.<local.item_<dlocal.e>_uid>.amount> adet <uid.<local.item_<dlocal.e>_uid>.name>
+						local.yy += 20
+					endfor
+				f_make_html 165,<eval <local.yy> + 30>,132,20,Satılığa çıkar 
+				button 143 <eval <local.yy> + 32> 2224 2224 1 0 1
+			else
+				f_make_html 75,95,120,20,İçinde eşya olmadığı için 
+				f_make_html 75,115,120,20,bunu satamazsınız
+			endif
+	endif
+
+	ctag.ref1 <ref1>
+	ctag.obj <obj>
+
+[dialog d_new_vendor_add_item button]
+on 1
+	if ((<isnum <argtxt[1]>>) && (<argtxt[1]> != 0))
+		dialogclose d_new_vendor_add_item
+		dialog d_new_vendor_add_item_confirm,0,<ctag.ref1>,<ctag.obj>,<argtxt[1]>
+	else
+		message @025,,1 Geçerli bir fiyat giriniz efendim
+		dialog d_new_vendor_add_item,0,<ctag.ref1>,<ctag.obj>
+	endif
+
+[dialog d_new_vendor_add_item_confirm] // [default]: buyer&seller || [<argv[0]>]: vendor || [<argv[1]>]: item || [<argv[2]>]: value
+	281,21
+	nomove
+	ref1 <argv[0]>		// vendor
+	obj <argv[1]>		// item
+	local.value <argv[2]>	// value
+
+	if <obj.type> != t_container
+		f_make_bg 180,25
+		f_make_html 65,15,320,20,<qval <obj.amount>==1 ? :<obj.amount> adet> <f_rename <obj.name>> adlı eşya için 
+		f_make_html 65,35,320,20,aşağıdakileri onaylıyor musunuz?
+		tilepichue 45 65 <obj.id> <eval <obj.color>>
+		f_make_html 95,65,90,20,Fiyat:
+		f_make_html 125,65,100,20,<dlocal.value> gp
+		f_make_html 165,105,320,20,Onaylıyorum
+		button 143 107 2224 2224 1 0 1
+	else
+		local.contnum 0
+		forcont <obj> 10
+			local.item_<dlocal.contnum>_uid <uid>
+			local.contnum += 1
+		endfor
+		local.height 30
+			if <dlocal.contnum> > 0
+				for d 1 <dlocal.contnum>
+				local.height += 20
+				endfor
+			endif
+		f_make_bg 180,<eval <local.height> + 20>
+		f_make_html 65,15,320,20,<f_rename <obj.name>> adlı eşya için 
+		f_make_html 65,35,320,20,aşağıdakileri onaylıyor musunuz?
+		tilepichue 45 65 <obj.id> <eval <obj.color>>
+		f_make_html 95,65,90,20,Fiyat:
+		f_make_html 125,65,100,20,<dlocal.value> gp
+			if <dlocal.contnum> > 0
+				f_make_html 65,95,120,20,İçindekiler:
+				local.yy 95
+					for e 0 <eval <local.contnum> - 1>
+						f_make_html 65,<eval <local.yy> + 20>,120,20,<uid.<local.item_<dlocal.e>_uid>.amount> adet <uid.<local.item_<dlocal.e>_uid>.name>
+						local.yy += 20
+					endfor
+				f_make_html 165,<eval <local.yy> + 30>,320,20,Onaylıyorum 
+				button 143 <eval <local.yy> + 32> 2224 2224 1 0 1
+			else
+				f_make_html 75,95,120,20,İçinde eşya olmadığı için 
+				f_make_html 75,115,120,20,bunu satamazsınız
+			endif 
+	endif
+
+	ctag.ref1 <ref1>
+	ctag.obj <obj>
+	ctag.value <dlocal.value>
+
+[dialog d_new_vendor_add_item_confirm button]
+on 1 
+	ref1 <ctag.ref1>
+	obj <ctag.obj>
+	local.value <ctag.value>
+		if <obj.iscont>
+			local.iscont 1
+		else
+			local.iscont 0
+		endif
+	db.connect
+	db.execute "insert into `vendor_items_<ref1>` values (NULL, NOW(), '<obj.uid>', '<obj.dispid>', '<obj.attr>', '<obj.name>', '<obj.color>', '<obj.amount>', '<obj.type>', '<dlocal.value>', '<name>', '<uid>', '<dlocal.iscont>');"
+	obj.cont <ref1.findlayer.29.uid>
+	updatex
+	sysmessage @1153,,1 <obj.amount> adet <f_rename <obj.name>> başarılı bir şekilde <ref1.name> adlı tüccara aktarıldı.
+		if <obj.iscont>
+			db.execute "create table if not exists vendor_item_details_<obj.uid> (contProductId int unsigned not null auto_increment primary key,contProductName text,contProductUid text,contProductDispId text,contProductAttr text,contProductColor text,contProductAmount int,contProductType text);"
+			forcont <obj.uid> 10
+			db.execute "insert into `vendor_item_details_<obj.uid>` values (NULL, '<name>', '<uid>', '<dispid>', '<attr>', '<color>', '<amount>', '<type>');"
+			endfor
+		endif
+	serv.log !Vendor Item Add Start! | <serv.rtime> 
+	serv.log Owner: Name: <name>, Accname: <account.name>, Uid: <uid> 
+	serv.log Vendor: Name: <ref1.name>, Uid: <ref1> 
+	serv.log OBJ: Name: <obj.name>, Uid: <obj>, Value: <dlocal.value>, isCont: <dlocal.iscont>
+	serv.log !Vendor Item Add Finish!
+
+[function f_isOnVendor]
+	obj <argv[0]>
+	ref1 <argv[1]>
+
+	if <obj.cont> == <ref1.findlayer.29.uid>
+		return 1
+	endif
+	db.connect
+	db.execute "delete from vendor_items_<ref1> where productUid='<obj>';"
+	return 0
+
+
+[dialog d_new_vendor_item_list] // [src]: buyer&seller || default: vendor
+	281,21
+	nomove
+	f_make_bg 350,320
+	f_make_html 65,15,320,20,<name> adlı tüccarda bulunan eşyalar aşağıda listelenmiştir.
+	db.connect
+	db.query "select * from vendor_items_<uid>;"
+	local.totalrow <db.row.numrows>
+	db.query "select * from vendor_items_<uid> order by productId desc limit <eval <src.ctag.startindex>>,7;"
+	if <db.row.numrows> != 0
+		local.y 20
+			for d 0 <eval <db.row.numrows> - 1>
+				obj <db.row.<dlocal.d>.productUid>
+					if <obj> && <f_isOnvendor <obj>,<uid>>
+						ref1 <db.row.<dlocal.d>.productOwnerUid>
+						button 105 <eval <local.y> + 33> 2224 2224 1 0 <db.row.<dlocal.d>.productId>
+						tilepichue 45 <eval <local.y> + 30> <obj.id> <eval <obj.color>>
+						f_make_html 130,<eval <local.y> + 30>,320,20,<f_rename <obj.name>> <qval <obj.amount>==1 ? :| <obj.amount> adet>
+						f_make_html 105,<eval <local.y> + 50>,320,20,Fiyatı <ref1.name> tarafından <db.row.<dlocal.d>.productCash>gp olarak belirlenmiştir
+						local.y += 50
+					else
+						ref1 <db.row.<dlocal.d>.productOwnerUid>
+						f_make_html 130,<eval <local.y> + 30>,320,20,<ref1.name> tarafından eklenen <f_rename <db.row.<dlocal.d>.productName>>
+						f_make_html 130,<eval <local.y> + 50>,320,20,şuan için listelenemiyor
+						local.y += 50
+					endif
+			endfor
+	else
+	f_make_html 130,55,320,20,Listelenecek eşya bulunamadı.
+	endif
+	if (<eval <src.ctag.startindex> - 7> >= 0)
+		button 105 400 5607 5603 1 0 99991
+	endif
+	if (<eval <src.ctag.startindex> + 7> < <dlocal.totalrow>)
+		button 345 400 5605 5601 1 0 99992
+	endif
+	
+[dialog d_new_vendor_item_list button]
+on 1 99990
+	dialog d_new_vendor_buy_item_confirm,0,<argn>
+on 99991
+	src.ctag.startindex -= 7
+	if <eval <src.ctag.startindex>> < 0
+	src.ctag.startindex 0
+	endif
+	dialog d_new_vendor_item_list,0,<src.uid>
+on 99992
+	src.ctag.startindex += 7
+	dialog d_new_vendor_item_list,0,<src.uid>
+
+[dialog d_new_vendor_buy_item_confirm]
+	281,21
+	nomove
+
+	if <argv[0]>		
+		db.connect
+		db.query "select * from vendor_items_<uid> where productId = '<argv[0]>';"
+		obj <db.row.0.productUid>		// item
+		local.value <db.row.0.productCash>	// value
+		src.ctag.item <obj>
+		src.ctag.value <dlocal.value>
+	else
+		return 1
+	endif
+
+	if <obj.type> != t_container
+		if <src.isOwnerThis <obj>,<uid>>
+			f_make_bg 180,35
+			f_make_html 65,15,320,20,<qval <obj.amount>==1 ? :<obj.amount> adet> <f_rename <obj.name>> adlı eşya 
+			f_make_html 65,35,320,20,hakkında ne yapmak istiyorsunuz?
+			tilepichue 45 65 <obj.id> <eval <obj.color>>
+			f_make_html 95,65,90,20,Fiyat:
+			f_make_html 205,65,90,20,gp
+			dtextentrylimited 125 65 200 20 0 1 9 <dlocal.value>
+			f_make_html 165,115,320,20,Satıştan kaldır
+			button 143 117 2224 2224 1 0 2
+			f_make_html 65,115,320,20,Fiyat güncelle
+			button 43 117 2224 2224 1 0 3
+		else
+			f_make_bg 180,25
+			f_make_html 65,15,320,20,<qval <obj.amount>==1 ? :<obj.amount> adet> <f_rename <obj.name>> adlı eşyayı 
+			f_make_html 65,35,320,20,almak istediğinizden emin misiniz?
+			tilepichue 45 65 <obj.id> <eval <obj.color>>
+			f_make_html 95,65,90,20,Fiyat:
+			f_make_html 125,65,100,20,<dlocal.value> gp
+			f_make_html 165,105,320,20,Eminim
+			button 143 107 2224 2224 1 0 1
+		endif
+	else
+		if <src.isOwnerThis <obj>,<uid>>
+		local.contnum 0
+		forcont <obj> 10
+			local.item_<dlocal.contnum>_uid <uid>
+			local.contnum += 1
+		endfor
+		local.height 30
+		if <dlocal.contnum> > 0
+			for d 1 <dlocal.contnum>
+				local.height += 20
+			endfor
+		endif
+		f_make_bg 180,<eval <local.height> + 20>
+		f_make_html 65,15,320,20,<qval <obj.amount>==1 ? :<obj.amount> adet> <f_rename <obj.name>> adlı eşya 
+		f_make_html 65,35,320,20,hakkında ne yapmak istiyorsunuz?
+		tilepichue 45 65 <obj.id> <eval <obj.color>>
+		f_make_html 95,65,90,20,Fiyat:
+		f_make_html 205,65,90,20,gp
+		dtextentrylimited 125 65 200 20 0 1 9 <dlocal.value>
+		if <dlocal.contnum> > 0
+			f_make_html 65,95,120,20,İçindekiler:
+			local.yy 95
+				for e 0 <eval <local.contnum> - 1>
+					f_make_html 65,<eval <local.yy> + 20>,120,20,<uid.<local.item_<dlocal.e>_uid>.amount> adet <uid.<local.item_<dlocal.e>_uid>.name>
+					local.yy += 20
+				endfor
+			f_make_html 165,<eval <local.yy> + 30>,320,20,Satıştan kaldır
+			button 143 <eval <local.yy> + 32> 2224 2224 1 0 2
+			f_make_html 65,<eval <local.yy> + 30>,320,20,Fiyat güncelle
+			button 43 <eval <local.yy> + 32> 2224 2224 1 0 3
+		else
+			f_make_html 75,95,120,20,İçinde eşya olmadığı için 
+			f_make_html 75,115,120,20,buna müdehale edemezsiniz
+		endif
+		else
+		local.contnum 0
+		forcont <obj> 10
+			local.item_<dlocal.contnum>_uid <uid>
+			local.contnum += 1
+		endfor
+		local.height 30
+		if <dlocal.contnum> > 0
+			for d 1 <dlocal.contnum>
+				local.height += 20
+			endfor
+		endif
+		f_make_bg 180,<eval <local.height> + 20>
+		f_make_html 65,15,320,20,<f_rename <obj.name>> adlı eşyayı
+		f_make_html 65,35,320,20,almak istediğinizden emin misiniz?
+		tilepichue 45 65 <obj.id> <eval <obj.color>>
+		f_make_html 95,65,90,20,Fiyat:
+		f_make_html 125,65,100,20,<dlocal.value> gp
+		if <dlocal.contnum> > 0
+			f_make_html 65,95,120,20,İçindekiler:
+			local.yy 95
+				for e 0 <eval <local.contnum> - 1>
+					f_make_html 65,<eval <local.yy> + 20>,120,20,<uid.<local.item_<dlocal.e>_uid>.amount> adet <uid.<local.item_<dlocal.e>_uid>.name>
+					local.yy += 20
+				endfor
+			f_make_html 165,<eval <local.yy> + 30>,320,20,Eminim
+			button 143 <eval <local.yy> + 32> 2224 2224 1 0 1
+		else
+			f_make_html 75,95,120,20,İçinde eşya olmadığı için 
+			f_make_html 75,115,120,20,bunu alamazsınız
+		endif
+		endif
+	endif
+
+[dialog d_new_vendor_buy_item_confirm button]
+on 1 // satın al
+	obj <src.ctag.item>
+	local.value <src.ctag.value>
+
+	if !<obj>
+		src.sysmessage @025,,1 Eşya yok.
+		return 1
+	else
+		if <src.gold> < <dlocal.value>
+			src.sysmessage @025,,1 Yeteri kadar altınınız bulunmadığı için bu eşyayı alamıyorsunuz!
+			return 1
+		else
+			db.connect
+			db.query "select * from vendor_items_<uid> where productUid = '<obj>';"
+			ref3 <db.row.0.productOwnerUid>		// item owner
+			src.gold -= <dlocal.value>
+			ref3.gold += <dlocal.value>
+			obj.cont <src.findlayer.21.uid>
+
+			db.execute "delete from vendor_items_<uid> where productUid='<obj>';"
+			serv.log !Vendor Item Buying Start! | <serv.rtime> 
+			serv.log OldOwner: Name: <ref3.name>, Accname: <ref3.account.name>, Uid: <ref3> 
+			serv.log NewOwner: Name: <src.name>, Accname: <src.account.name>, Uid: <src> 
+			serv.log Vendor: Name: <name>, Uid: <uid> 
+			serv.log OBJ: Name: <obj.name>, Uid: <obj>, Value: <dlocal.value>
+			serv.log !Vendor Item Buying Finish! 
+		endif
+	endif
+
+on 2 // satıştan kaldır
+	obj <src.ctag.item>
+	local.value <src.ctag.value>
+
+	if !<src.isOwnerThis <obj>,<uid>>
+		src.sysmessage @025,,1 Bu değişiklik için eşyanın sahibi olmalısınız!
+		return 1
+	else
+		obj.cont <src.findlayer.21.uid>
+		db.execute "delete from vendor_items_<uid> where productUid='<obj>';"
+		serv.log !Vendor Item Release Start! | <serv.rtime> 
+		serv.log Owner: Name: <src.name>, Accname: <src.account.name>, Uid: <src> 
+		serv.log Vendor: Name: <name>, Uid: <uid> 
+		serv.log OBJ: Name: <obj.name>, Uid: <obj>, Value: <dlocal.value>
+		serv.log !Vendor Item Release Finish! 
+	endif
+	
+
+on 3 // fiyat güncelle
+	obj <src.ctag.item>
+	local.value <src.ctag.value>
+
+	if !<src.isOwnerThis <obj>,<uid>>
+		src.sysmessage @025,,1 Bu değişiklik için eşyanın sahibi olmalısınız!
+		return 1
+	else
+		if ((<isnum <argtxt[1]>>) && (<argtxt[1]> != 0))
+			db.execute "update vendor_items_<uid> set productCash='<eval <argtxt[1]>>' where productUid='<obj>'"
+			serv.log !Vendor Item ReCash Start! | <serv.rtime> 
+			serv.log Owner: Name: <src.name>, Accname: <src.account.name>, Uid: <src> 
+			serv.log Vendor: Name: <name>, Uid: <src> 
+			serv.log OBJ: Name: <obj.name>, Uid: <obj>, OldValue: <dlocal.value>, NewValue: <eval <argtxt[1]>>
+			serv.log !Vendor Item ReCash Finish!
+		else
+			src.sysmessage @025,,1 Lütfen geçerli bir fiyat belirtiniz!
+			return 1
+		endif
+	endif}}}```

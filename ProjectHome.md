@@ -1,0 +1,1 @@
+mysql destekli vendor sistemi.
